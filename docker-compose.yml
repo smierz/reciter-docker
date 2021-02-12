@@ -1,0 +1,51 @@
+version: '3'
+
+services:
+
+  reciter-pubmed:
+    restart: always
+    build: ./ReCiter-PubMed-Retrieval-Tool/
+    working_dir: /reciter-pubmed
+    environment:
+      - PUBMED_API_KEY=xxx
+      - SERVER_PORT=5002
+    ports:
+      - 5002:5002
+    command: mvn spring-boot:run
+
+
+  reciter:
+    restart: always
+    build: ./ReCiter-Local/
+    working_dir: /reciter
+    environment:
+      - AMAZON_AWS_ACCESS_KEY=access-key
+      - AMAZON_AWS_SECRET_KEY=secret-key
+      - AMAZON_DYNAMODB_ENDPOINT=https://dynamodb.eu-central-1.amazonaws.com
+      - AWS_REGION=eu-central-1
+      - ADMIN_API_KEY=api-key
+      - CONSUMER_API_KEY=api-key
+      - SERVER_PORT=5000
+      - USE_SCOPUS_ARTICLES=false #overwrite application.properties
+      - SCOPUS_SERVICE=reciter-scopus-url
+      - PUBMED_SERVICE=http://reciter-pubmed:5002/
+      - JAVA_OPTIONS=-Xmx1000m
+    ports:
+      - 5000:5000
+    #using dynamodb local
+    depends_on:
+      - dynamo
+      - reciter-pubmed
+
+
+  #dynamodb local
+  dynamo:
+    image: amazon/dynamodb-local
+    environment:
+      - ./Djava.library.path=./DynamoDBLocal_lib
+    ports:
+      - 8000:8000
+    volumes:
+      - ./ReCiter-Local/dynamodblocal:/home/dynamodblocal/data
+    working_dir: /home/dynamodblocal
+    command: ["-jar", "DynamoDBLocal.jar", "-sharedDb", "-dbPath", "./data"]
